@@ -6,11 +6,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { profile } from '@/lib/content/portfolio';
+import { profile, projects } from '@/lib/content/portfolio';
+import { useIstClock } from '@/hooks/useIstClock';
+import { track } from '@/lib/analytics';
 import { useSmoothScroll } from '@/hooks/smoothScroll';
 import { useFinePointer, useReducedMotionPref } from '@/hooks/useMedia';
 import { EASE, Magnetic, Particles } from './fx';
-import { StudioMark } from './Poster';
+import SiteFooter from './SiteFooter';
+import type { SectionId } from '@/lib/content/portfolio';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Please enter your name').max(80),
@@ -31,7 +34,31 @@ type ToastState = {
   detail: string;
 } | null;
 
+const REASONS = [
+  { id: 'hiring', label: 'Hiring', subject: 'Role opportunity' },
+  { id: 'collab', label: 'Collaboration', subject: 'Collaboration idea' },
+  { id: 'freelance', label: 'Freelance project', subject: 'Freelance project enquiry' },
+  { id: 'question', label: 'Question about my work', subject: 'Question about your work' },
+  { id: 'hello', label: 'Just saying hi', subject: 'Hello' },
+] as const;
+
+const DRAFT_KEY = 'gautam-portfolio-contact-draft';
+
+type SentInfo = { name: string; email: string; reason: string | null; mode: 'sent' | 'mailto' };
+
 const CHANNELS = [
+  ...(profile.links.booking
+    ? [
+        {
+          id: 'call' as const,
+          label: 'Book a 20-min call',
+          hint: 'Pick a time that suits you',
+          href: profile.links.booking,
+          accent: '#a78bfa',
+          action: '↗' as const,
+        },
+      ]
+    : []),
   {
     id: 'linkedin' as const,
     label: 'LinkedIn',
@@ -67,7 +94,7 @@ const CHANNELS = [
   },
 ];
 
-export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
+export default function FinalCTA({ onReplay, order }: { onReplay: () => void; order: SectionId[] }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotionPref();
   const fine = useFinePointer();
@@ -75,6 +102,10 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
   const [status, setStatus] = useState<Status>('idle');
   const [toast, setToast] = useState<ToastState>(null);
   const [mounted, setMounted] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
+  const [sentInfo, setSentInfo] = useState<SentInfo | null>(null);
+  const autoSubject = useRef('');
+  const time = useIstClock();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start 0.25'] });
   const yTitle = useTransform(scrollYProgress, [0, 1], [reduced ? 0 : 40, 0]);
   const opacity = useTransform(scrollYProgress, [0.05, 0.65], [reduced ? 1 : 0, 1]);
@@ -96,11 +127,83 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
     handleSubmit,
     reset,
     setFocus,
+    setValue,
+    getValues,
+    watch,
     formState: { errors },
   } = useForm<ContactValues>({
     resolver: zodResolver(contactSchema),
     defaultValues: { name: '', email: '', subject: '', message: '', company: '' },
   });
+
+  const pickReason = (id: string | null) => {
+    setReason(id);
+    const r = REASONS.find((x) => x.id === id);
+    if (!r) return;
+    track('contact_reason', { id: r.id });
+    const current = getValues('subject')?.trim() ?? '';
+    // Only overwrite a subject we filled in ourselves — never the visitor's own words
+    if (!current || current === autoSubject.current) {
+      setValue('subject', r.subject, { shouldDirty: true });
+      autoSubject.current = r.subject;
+    }
+  };
+
+  // Restore an unsent draft, then apply any prefill (project page link or "Ask about this project")
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw) as Partial<ContactValues> & { reason?: string | null };
+        reset({ name: d.name ?? '', email: d.email ?? '', subject: d.subject ?? '', message: d.message ?? '', company: '' });
+        if (d.reason) setReason(d.reason);
+      }
+    } catch {
+      /* ignore */
+    }
+    const apply = (d: { reason?: string; subject?: string; message?: string }, focus: boolean) => {
+      setSentInfo(null);
+      if (d.reason) setReason(d.reason);
+      if (d.subject) {
+        setValue('subject', d.subject, { shouldDirty: true });
+        autoSubject.current = d.subject;
+      }
+      if (d.message) setValue('message', d.message, { shouldDirty: true });
+      if (focus) window.setTimeout(() => setFocus('message'), 900);
+    };
+    const onPrefill = (e: Event) => apply((e as CustomEvent).detail ?? {}, true);
+    window.addEventListener('portfolio:contact-prefill', onPrefill);
+    const ask = new URLSearchParams(window.location.search).get('ask');
+    const project = ask ? projects.find((p) => p.id === ask) : undefined;
+    if (project) apply({ reason: 'question', subject: `About: ${project.title}` }, false);
+    return () => window.removeEventListener('portfolio:contact-prefill', onPrefill);
+  }, [reset, setFocus, setValue]);
+
+  useEffect(() => {
+    const sub = watch((v) => {
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ name: v.name, email: v.email, subject: v.subject, message: v.message, reason }));
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [watch, reason]);
+
+  // Never call bare reset(): restoring a draft re-bases RHF's defaults onto the draft values.
+  const blank = () => {
+    reset({ name: '', email: '', subject: '', message: '', company: '' });
+    setReason(null);
+    autoSubject.current = '';
+  };
+
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const onInvalid = (errs: typeof errors) => {
     const order: (keyof ContactValues)[] = ['name', 'email', 'subject', 'message'];
@@ -112,19 +215,23 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
     // Honeypot trip — pretend success, never hit the API
     if (values.company?.trim()) {
       setStatus('sent');
+      setSentInfo({ name: values.name, email: values.email, reason, mode: 'sent' });
       setToast({
         tone: 'success',
         title: 'Message sent',
         detail: "Thanks — I'll reply to your email soon.",
       });
-      reset();
+      blank();
+      clearDraft();
       window.setTimeout(() => setStatus('idle'), 1800);
       return;
     }
 
     setStatus('sending');
     const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
-    const subject = values.subject?.trim() || `Portfolio message from ${values.name}`;
+    const reasonLabel = REASONS.find((r) => r.id === reason)?.label;
+    const base = values.subject?.trim() || `Portfolio message from ${values.name}`;
+    const subject = reasonLabel ? `[${reasonLabel}] ${base}` : base;
 
     try {
       if (accessKey) {
@@ -137,36 +244,44 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
             email: values.email,
             subject,
             message: values.message,
+            reason: reasonLabel ?? 'Not specified',
             from_name: 'Gautam Portfolio',
           }),
         });
         const data = (await res.json()) as { success?: boolean };
         if (!res.ok || !data.success) throw new Error('submit failed');
         setStatus('sent');
+        track('contact_submit', { id: reason ?? 'none' });
+        setSentInfo({ name: values.name, email: values.email, reason, mode: 'sent' });
         setToast({
           tone: 'success',
           title: 'Message sent',
           detail: "Thanks — I'll reply to your email soon.",
         });
         window.setTimeout(() => setStatus('idle'), 1800);
-        reset();
+        blank();
+        clearDraft();
         return;
       }
 
-      const body = [`Name: ${values.name}`, `Email: ${values.email}`, '', values.message].join('\n');
+      const body = [`Name: ${values.name}`, `Email: ${values.email}`, ...(reasonLabel ? [`Reason: ${reasonLabel}`] : []), '', values.message].join('\n');
       setStatus('sent');
+      track('contact_submit', { id: reason ?? 'none' });
+      setSentInfo({ name: values.name, email: values.email, reason, mode: 'mailto' });
       setToast({
         tone: 'success',
         title: 'Opening your mail app',
         detail: 'Please send the prefilled message to reach me.',
       });
-      reset();
+      blank();
+      clearDraft();
       window.setTimeout(() => {
         window.location.href = `mailto:${profile.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       }, 220);
       window.setTimeout(() => setStatus('idle'), 1800);
     } catch {
       setStatus('idle');
+      track('contact_error');
       setToast({
         tone: 'error',
         title: 'Could not send',
@@ -210,7 +325,7 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
 
       <motion.div className="relative z-10 w-full max-w-5xl px-2 text-center" style={{ opacity }}>
         <motion.p
-          className="mb-4 text-[11px] font-bold uppercase tracking-[0.5em] text-signal"
+          className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal sm:tracking-[0.5em]"
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -333,9 +448,41 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
                 );
               })}
             </ul>
+
+            <div className="mt-8 rounded-2xl border border-white/10 bg-ink/40 p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-smoke">Availability</p>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-signal/30 bg-signal/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-signal">
+                  <span className="h-1.5 w-1.5 rounded-full bg-signal" /> Open to opportunities
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-mist">
+                {profile.location.split(' / ')[0]} · <span className="tabular-nums text-bone">{time ?? '--:--'}</span> IST · usually replies within 24–48h
+              </p>
+              <ol className="mt-4 space-y-3">
+                {[
+                  ['You send a note', 'Share the role, project or idea.'],
+                  ['I reply personally', 'Within one to two working days.'],
+                  ['We talk', 'A short call, or I walk you through the architecture.'],
+                ].map(([t, d], i) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-signal/40 bg-signal/10 text-[11px] font-bold text-signal">
+                      {i + 1}
+                    </span>
+                    <span className="text-xs leading-relaxed text-mist">
+                      <span className="block text-[13px] font-semibold text-bone">{t}</span>
+                      {d}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </motion.aside>
 
           {/* Right: compose */}
+          {sentInfo ? (
+            <SuccessPanel info={sentInfo} reduced={reduced} onAgain={() => setSentInfo(null)} />
+          ) : (
           <motion.form
             onSubmit={handleSubmit(onSubmit, onInvalid)}
             className="relative p-5 sm:p-8 lg:p-10"
@@ -373,6 +520,32 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
                 autoComplete="off"
                 type="text"
               />
+            </div>
+
+            <div role="radiogroup" aria-label="I'm reaching out about" className="mb-6">
+              <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.24em] text-smoke">I&apos;m reaching out about</p>
+              <div className="flex flex-wrap gap-2">
+                {REASONS.map((r) => {
+                  const on = reason === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      data-cursor="link"
+                      onClick={() => pickReason(on ? null : r.id)}
+                      className={`min-h-10 rounded-full border px-3.5 text-xs font-semibold transition ${
+                        on
+                          ? 'border-signal/70 bg-signal/15 text-bone shadow-[0_0_20px_rgba(45,212,191,0.18)]'
+                          : 'border-white/12 bg-white/[0.03] text-mist hover:border-white/25 hover:text-bone'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2 sm:gap-5">
@@ -422,6 +595,9 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
                 aria-invalid={errors.message ? true : undefined}
                 aria-describedby={errors.message ? 'contact-message-error' : undefined}
               />
+              <p className={`mt-1.5 text-right text-[11px] tabular-nums ${(watch('message') ?? '').length > 1800 ? 'text-gold' : 'text-smoke'}`}>
+                {(watch('message') ?? '').length} / 2000
+              </p>
             </Field>
 
             <motion.div
@@ -497,49 +673,11 @@ export default function FinalCTA({ onReplay }: { onReplay: () => void }) {
               </p>
             </motion.div>
           </motion.form>
+          )}
         </div>
       </motion.div>
 
-      <footer className="relative z-10 mt-12 w-full max-w-5xl border-t border-white/10 px-2 pt-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:mt-16 sm:pt-10">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="text-center sm:text-left">
-            <div className="mb-2 flex items-center justify-center gap-2.5 sm:justify-start">
-              <StudioMark />
-              <span className="font-display text-lg tracking-wide text-bone">{profile.displayName}</span>
-            </div>
-            <p className="text-sm text-mist">
-              {profile.role}
-              <span className="text-smoke"> · {profile.location}</span>
-            </p>
-          </div>
-
-          <nav
-            aria-label="Footer"
-            className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] font-medium uppercase tracking-[0.18em] text-smoke sm:justify-end sm:gap-x-5"
-          >
-            <button type="button" onClick={() => scrollTo('#originals')} className="transition hover:text-bone">
-              Work
-            </button>
-            <button type="button" onClick={() => scrollTo('#story')} className="transition hover:text-bone">
-              Resume
-            </button>
-            <button type="button" onClick={() => scrollTo('#contact')} className="transition hover:text-bone">
-              Contact
-            </button>
-            <span aria-hidden className="hidden h-3 w-px bg-white/15 sm:block" />
-            <button type="button" onClick={() => scrollTo(0, { offset: 0 })} className="transition hover:text-bone">
-              ↑ Top
-            </button>
-            <button type="button" onClick={onReplay} className="transition hover:text-bone">
-              Replay
-            </button>
-          </nav>
-        </div>
-
-        <p className="mt-8 border-t border-white/[0.06] pt-5 text-center text-[11px] leading-relaxed text-smoke/90 sm:text-left">
-          © {new Date().getFullYear()} {profile.displayName}. Built with care — privacy-safe case studies.
-        </p>
-      </footer>
+      <SiteFooter order={order} onReplay={onReplay} />
     </section>
   );
 }
@@ -548,7 +686,7 @@ function ChannelIcon({
   id,
   className = 'relative h-5 w-5',
 }: {
-  id: 'linkedin' | 'github' | 'email' | 'resume';
+  id: 'linkedin' | 'github' | 'email' | 'resume' | 'call';
   className?: string;
 }) {
   if (id === 'linkedin') {
@@ -565,6 +703,15 @@ function ChannelIcon({
       </svg>
     );
   }
+  if (id === 'call') {
+    return (
+      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+        <path d="M3.5 10h17M8 3v4M16 3v4" strokeLinecap="round" />
+        <path d="M9 14.5l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
   if (id === 'resume') {
     return (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
@@ -578,6 +725,106 @@ function ChannelIcon({
       <rect x="3" y="5" width="18" height="14" rx="2.5" />
       <path d="M4 7.5L12 13l8-5.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function SuccessPanel({ info, reduced, onAgain }: { info: SentInfo; reduced: boolean; onAgain: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const reasonLabel = REASONS.find((r) => r.id === info.reason)?.label;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(profile.email);
+      track('email_copy');
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.location.href = `mailto:${profile.email}`;
+    }
+  };
+  return (
+    <motion.div
+      className="relative flex flex-col items-center justify-center p-6 text-center sm:p-10 lg:p-12"
+      initial={{ opacity: 0, y: reduced ? 0 : 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: EASE }}
+      role="status"
+      aria-live="polite"
+    >
+      <span aria-hidden className="pointer-events-none absolute right-5 top-5 h-4 w-4 border-r border-t border-signal/40" />
+      <span aria-hidden className="pointer-events-none absolute bottom-5 left-5 h-4 w-4 border-b border-l border-signal/40" />
+
+      <svg viewBox="0 0 96 96" className="h-24 w-24" fill="none" aria-hidden>
+        <motion.circle
+          cx="48"
+          cy="48"
+          r="42"
+          stroke="var(--color-signal)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          initial={{ pathLength: reduced ? 1 : 0, opacity: 0.9 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.9, ease: EASE }}
+        />
+        <motion.path
+          d="M30 50l12 12 24-26"
+          stroke="var(--color-signal-2)"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: reduced ? 1 : 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.6, ease: EASE, delay: 0.7 }}
+        />
+      </svg>
+
+      <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.3em] text-signal">
+        {info.mode === 'mailto' ? 'One last step' : 'Transmission received'}
+      </p>
+      <h3 className="mt-2 font-display text-3xl tracking-wide text-bone sm:text-4xl">
+        {info.mode === 'mailto' ? 'Send it from your mail app' : `Thank you, ${info.name.split(' ')[0]}.`}
+      </h3>
+      <p className="mt-3 max-w-md text-sm leading-relaxed text-mist">
+        {info.mode === 'mailto'
+          ? 'Your mail app should open with the message prefilled. Press send there and it reaches me directly.'
+          : (
+            <>
+              I&apos;ll reply to <span className="font-semibold text-bone">{info.email}</span> within one to two working days.
+            </>
+          )}
+      </p>
+      {reasonLabel && (
+        <span className="mt-4 rounded-full border border-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-smoke">
+          Topic · {reasonLabel}
+        </span>
+      )}
+
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <a
+          href={profile.resumePdf}
+          download="Gautam_MA_Resume.pdf"
+          data-cursor="link"
+          className="flex min-h-12 items-center gap-2 rounded-full bg-signal px-6 text-sm font-bold tracking-[0.1em] text-ink transition hover:bg-signal-2"
+        >
+          ↓ Resume while you wait
+        </a>
+        <button
+          type="button"
+          onClick={copy}
+          data-cursor="link"
+          className="glass flex min-h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold text-bone transition hover:bg-white/15"
+        >
+          {copied ? '✓ Email copied' : '⧉ Copy my email'}
+        </button>
+        <button
+          type="button"
+          onClick={onAgain}
+          data-cursor="link"
+          className="flex min-h-12 items-center rounded-full border border-white/12 px-5 text-sm font-semibold text-mist transition hover:border-white/25 hover:text-bone"
+        >
+          Send another
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -608,7 +855,7 @@ function AirplaneBannerToast({
     <motion.div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed left-0 top-[4.75rem] z-[9999] w-max sm:top-24"
+      className="pointer-events-none fixed left-0 top-[calc(env(safe-area-inset-top,0px)+4.75rem)] z-[9999] w-max sm:top-24"
       initial={{ x: '-60vw', opacity: 0 }}
       animate={
         reduced

@@ -117,7 +117,7 @@ export default function HighlightsReel({ onClose }: { onClose: () => void }) {
           height={profile.portrait.height}
           alt=""
           decoding="async"
-          className="h-[88vh] w-auto max-w-none object-contain [mask-image:linear-gradient(to_bottom,black_60%,transparent)]"
+          className="h-[88svh] w-auto max-w-none object-contain [mask-image:linear-gradient(to_bottom,black_60%,transparent)]"
         />
       </motion.div>
       <div aria-hidden className="absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_45%,rgba(15,118,110,0.35),transparent_70%)]" />
@@ -146,7 +146,7 @@ export default function HighlightsReel({ onClose }: { onClose: () => void }) {
               exit={{ opacity: 0, scale: 0.96, filter: 'blur(10px)' }}
               transition={{ duration: 0.7, ease: EASE }}
             >
-              <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.5em] text-signal sm:text-xs">
+              <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal sm:text-xs sm:tracking-[0.5em]">
                 Highlight {String(index + 1).padStart(2, '0')} · {slide.kicker}
               </p>
               <h2 className="font-display leading-[0.88] text-bone" style={{ fontSize: 'clamp(3rem, 10vw, 8.5rem)' }}>
@@ -185,7 +185,7 @@ export default function HighlightsReel({ onClose }: { onClose: () => void }) {
           {phase === 'end' && (
             <motion.div key="end" initial={{ opacity: 0, letterSpacing: '0.6em' }} animate={{ opacity: 1, letterSpacing: '0.2em' }} transition={{ duration: 1.2, ease: EASE }}>
               <p className="font-display text-5xl text-bone sm:text-7xl">ENTER PORTFOLIO</p>
-              <p className="mt-3 text-xs font-semibold tracking-[0.4em] text-mist">{profile.displayName.toUpperCase()}</p>
+              <p className="mt-3 text-xs font-semibold tracking-[0.28em] text-mist sm:tracking-[0.4em]">{profile.displayName.toUpperCase()}</p>
             </motion.div>
           )}
         </AnimatePresence>

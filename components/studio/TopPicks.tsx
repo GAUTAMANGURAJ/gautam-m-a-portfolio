@@ -13,7 +13,14 @@ export default function TopPicks() {
     <>
       <SectionHeading kicker="From the work" title="Highlights" />
       <div className="group/rail relative">
-        <div ref={rail} data-lenis-prevent className="rail gutter flex gap-2 overflow-x-auto py-6">
+        <div
+          ref={rail}
+          data-lenis-prevent
+          role="region"
+          aria-label="Highlights — scroll sideways"
+          tabIndex={0}
+          className="rail gutter flex gap-2 overflow-x-auto py-6"
+        >
           {topPicks.map((pick, i) => (
             <motion.div
               key={pick.title}
@@ -35,7 +42,7 @@ export default function TopPicks() {
                   <PosterBackdrop palette={pick.palette} />
                 </div>
                 <div className="absolute inset-0 flex flex-col justify-between p-3.5">
-                  <span className="text-[9px] font-bold uppercase tracking-[0.26em] text-bone/70">{pick.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.26em] text-bone/70">{pick.label}</span>
                   <div>
                     <p className="font-display text-[1.75rem] leading-[0.92] tracking-wide text-bone">{pick.title}</p>
                     <p className="mt-1.5 text-[11px] leading-snug text-mist">{pick.detail}</p>

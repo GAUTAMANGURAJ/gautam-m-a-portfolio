@@ -49,7 +49,7 @@ export default function ResumeModal({ onClose }: { onClose: () => void }) {
           >
             ⎙ Print
           </button>
-          <a href={profile.resumePdf} download="Gautam_MA_Resume.pdf" className="rounded-md bg-bone px-4 py-2 text-xs font-bold text-ink">
+          <a href={profile.resumePdf} download="Gautam_MA_Resume.pdf" className="rounded-md bg-bone px-3 py-2.5 text-xs font-bold text-ink xs:px-4">
             ⤓ Download
           </a>
           <button

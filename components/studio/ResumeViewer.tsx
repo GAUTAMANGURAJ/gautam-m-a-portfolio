@@ -12,7 +12,7 @@ import {
   skillCategories,
   workingPrinciples,
 } from '@/lib/content/portfolio';
-import { EASE, Magnetic, SectionHeading } from './fx';
+import { CountUp, EASE, Magnetic, SectionHeading } from './fx';
 
 /** Resume preview plus view / download / print actions. */
 export default function ResumeViewer({ onView }: { onView: () => void }) {
@@ -82,9 +82,9 @@ export default function ResumeViewer({ onView }: { onView: () => void }) {
               { v: String(achievements.length), k: 'Moments' },
               { v: String(certifications.length), k: 'Certs' },
             ].map((s) => (
-              <div key={s.k} className="bg-ink-2 px-2 py-4">
-                <dd className="font-display text-3xl leading-none text-bone">{s.v}</dd>
+              <div key={s.k} className="flex flex-col-reverse bg-ink-2 px-2 py-4">
                 <dt className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-smoke">{s.k}</dt>
+                <dd className="font-display text-3xl leading-none text-bone"><CountUp value={s.v} /></dd>
               </div>
             ))}
           </dl>
@@ -135,14 +135,13 @@ export function ResumeSheet() {
           <p className="mt-1 text-xs text-mist">{profile.role}</p>
         </div>
         <div className="text-xs leading-relaxed text-mist sm:text-right">
-          <a href={`mailto:${profile.email}`} className="block hover:text-bone">
+          <a href={`mailto:${profile.email}`} className="flex min-h-7 items-center hover:text-bone sm:justify-end">
             {profile.email}
           </a>
-          <a href={profile.links.linkedin} target="_blank" rel="noreferrer" className="hover:text-bone">
+          <a href={profile.links.linkedin} target="_blank" rel="noreferrer" className="inline-flex min-h-7 items-center px-1.5 hover:text-bone">
             LinkedIn ↗
           </a>
-          {' · '}
-          <a href={profile.links.github} target="_blank" rel="noreferrer" className="hover:text-bone">
+          <a href={profile.links.github} target="_blank" rel="noreferrer" className="inline-flex min-h-7 items-center px-1.5 hover:text-bone">
             GitHub ↗
           </a>
         </div>

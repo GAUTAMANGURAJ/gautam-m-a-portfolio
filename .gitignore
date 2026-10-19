@@ -34,3 +34,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright
+/playwright-report/
+/test-results/
+/.lighthouseci/
+
+# internal documents - never publish
+/Gautam_MA_Performance_Contribution_Record*.pdf
+/*.pdf

@@ -32,7 +32,7 @@ export default function ScrollProgress() {
   }, [p, scaleX]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[2px] bg-white/5">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[70] h-[2px] bg-white/5">
       <motion.div className="h-full origin-left bg-gradient-to-r from-signal via-signal-2 to-gold" style={{ scaleX }} />
     </div>
   );

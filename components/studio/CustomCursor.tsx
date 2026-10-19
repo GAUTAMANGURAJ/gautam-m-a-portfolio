@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion, useMotionValue, useSpring } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useSpring, type MotionValue } from 'framer-motion';
 import { useFinePointer, useReducedMotionPref } from '@/hooks/useMedia';
 
 const LABELS: Record<string, string> = { view: 'VIEW', play: '▶', link: '↗', drag: '↔', close: '✕' };
@@ -23,6 +23,7 @@ export default function CustomCursor() {
   const [hoverLink, setHoverLink] = useState(false);
   const [visible, setVisible] = useState(false);
   const [down, setDown] = useState(false);
+  const rootStyle = typeof document !== 'undefined' ? document.documentElement.style : null;
 
   useEffect(() => {
     if (!enabled) return;
@@ -30,6 +31,8 @@ export default function CustomCursor() {
     const move = (e: PointerEvent) => {
       x.set(e.clientX);
       y.set(e.clientY);
+      rootStyle?.setProperty('--cx', `${e.clientX}px`);
+      rootStyle?.setProperty('--cy', `${e.clientY}px`);
       setVisible(true);
       const t = e.target as HTMLElement | null;
       const tagged = t?.closest<HTMLElement>('[data-cursor]');
@@ -50,13 +53,18 @@ export default function CustomCursor() {
       window.removeEventListener('pointerdown', press);
       window.removeEventListener('pointerup', release);
     };
-  }, [enabled, x, y]);
+  }, [enabled, x, y, rootStyle]);
 
   if (!enabled) return null;
   const label = mode ? LABELS[mode] : null;
   const size = label ? (mode === 'view' ? 72 : 52) : hoverLink ? 34 : 10;
 
   return (
+    <>
+      <div aria-hidden className="cursor-grid" />
+      {TRAIL.map((t, i) => (
+        <TrailDot key={i} x={x} y={y} stiffness={t.k} size={t.s} hidden={!visible || !!label} />
+      ))}
     <motion.div
       aria-hidden
       className="pointer-events-none fixed left-0 top-0 z-[200] flex items-center justify-center rounded-full"
@@ -86,5 +94,29 @@ export default function CustomCursor() {
         )}
       </AnimatePresence>
     </motion.div>
+    </>
+  );
+}
+
+/** Soft comet trail: each dot chases the pointer with a progressively slower spring. */
+const TRAIL = [
+  { k: 220, s: 8 },
+  { k: 150, s: 7 },
+  { k: 100, s: 5.5 },
+  { k: 66, s: 4 },
+  { k: 42, s: 3 },
+];
+
+function TrailDot({ x, y, stiffness, size, hidden }: { x: MotionValue<number>; y: MotionValue<number>; stiffness: number; size: number; hidden: boolean }) {
+  const sx = useSpring(x, { stiffness, damping: 24, mass: 0.6 });
+  const sy = useSpring(y, { stiffness, damping: 24, mass: 0.6 });
+  return (
+    <motion.span
+      aria-hidden
+      className="pointer-events-none fixed left-0 top-0 z-[199] rounded-full bg-signal-2"
+      style={{ x: sx, y: sy, translateX: '-50%', translateY: '-50%', width: size, height: size, boxShadow: '0 0 12px var(--glow-signal)' }}
+      animate={{ opacity: hidden ? 0 : 0.5 }}
+      transition={{ duration: 0.25 }}
+    />
   );
 }

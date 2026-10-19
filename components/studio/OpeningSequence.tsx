@@ -125,7 +125,7 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
           CHIPS.map((chip, i) => (
             <motion.span
               key={chip.label}
-              className="pointer-events-none absolute z-[3] rounded-md border border-signal/40 bg-ink/75 px-3 py-1.5 font-sans text-[9px] font-semibold uppercase tracking-[0.18em] text-signal-2 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-sm sm:text-[11px] sm:tracking-[0.2em]"
+              className="pointer-events-none absolute z-[3] rounded-md border border-signal/40 bg-ink/75 px-3 py-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-signal-2 shadow-[0_0_24px_rgba(45,212,191,0.12)] backdrop-blur-sm sm:text-[11px] sm:tracking-[0.2em]"
               style={{ left: chip.x, top: chip.y }}
               initial={{ opacity: 0, scale: 0.65, y: 14, filter: 'blur(6px)' }}
               animate={{
@@ -149,7 +149,7 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
 
       {/* Portrait — reality resolve + light sweep */}
       <motion.div
-        className="absolute inset-x-0 bottom-0 z-[4] mx-auto flex h-[72vh] max-w-[920px] items-end justify-center"
+        className="absolute inset-x-0 bottom-0 z-[4] mx-auto flex h-[72svh] max-w-[920px] items-end justify-center"
         initial={{ opacity: 0, scale: 1.08, filter: 'blur(22px) brightness(0.2) saturate(0.25)' }}
         animate={
           beat >= 5
@@ -186,9 +186,9 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
       {/* Typography */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-4 text-center">
         <motion.p
-          className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.45em] text-signal sm:text-xs"
+          className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.28em] text-signal sm:text-xs sm:tracking-[0.45em]"
           initial={{ opacity: 0, y: 8 }}
-          animate={beat >= 3 ? { opacity: 1, y: beat >= 5 ? '-22vh' : 0 } : {}}
+          animate={beat >= 3 ? { opacity: 1, y: beat >= 5 ? '-22svh' : 0 } : {}}
           transition={{ duration: 0.8, ease: EASE }}
         >
           From blueprint
@@ -202,7 +202,7 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
             beat >= 3
               ? {
                   opacity: 1,
-                  y: beat >= 5 ? '-22vh' : 0,
+                  y: beat >= 5 ? '-22svh' : 0,
                   filter: 'blur(0px)',
                   letterSpacing: '0em',
                 }
@@ -221,7 +221,7 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
               ? {
                   opacity: 1,
                   letterSpacing: '0.28em',
-                  y: beat >= 5 ? '-22vh' : 0,
+                  y: beat >= 5 ? '-22svh' : 0,
                 }
               : {}
           }
@@ -231,7 +231,7 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
         </motion.p>
       </div>
 
-      <div className="absolute inset-x-0 bottom-[8vh] z-20 flex flex-col items-center gap-5 px-4 text-center">
+      <div className="absolute inset-x-0 bottom-[8svh] z-20 flex flex-col items-center gap-5 px-4 text-center">
         <motion.p
           className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-bone/85 sm:text-sm sm:tracking-[0.3em]"
           initial={{ opacity: 0, y: 12 }}
@@ -263,7 +263,7 @@ export default function OpeningSequence({ onDone }: { onDone: () => void }) {
       <button
         type="button"
         onClick={onDone}
-        className="absolute right-4 top-5 z-40 rounded-full border border-white/15 px-4 py-2 font-sans text-[11px] font-semibold tracking-[0.2em] text-mist transition hover:border-signal/50 hover:text-bone"
+        className="absolute right-4 top-11 z-40 sm:top-5 rounded-full border border-white/15 px-4 py-2 font-sans text-[11px] font-semibold tracking-[0.2em] text-mist transition hover:border-signal/50 hover:text-bone"
       >
         SKIP
       </button>
@@ -275,7 +275,7 @@ function BlueprintFrame({ active, dissolving }: { active: boolean; dissolving: b
   return (
     <svg
       viewBox="0 0 320 420"
-      className="h-[min(70vh,520px)] w-auto text-signal"
+      className="h-[min(70svh,520px)] w-auto text-signal"
       fill="none"
       aria-hidden
     >

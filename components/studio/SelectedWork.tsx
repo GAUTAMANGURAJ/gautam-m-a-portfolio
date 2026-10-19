@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useScroll, useSpring, useTransform } from 'framer-motion';
 import { profile, projects, type Project } from '@/lib/content/portfolio';
-import { useDesktop, useReducedMotionPref } from '@/hooks/useMedia';
+import { useDesktop, useFinePointer, useReducedMotionPref } from '@/hooks/useMedia';
 import { EASE, RevealText } from './fx';
 import ProjectCard from './ProjectCard';
 
@@ -14,7 +14,9 @@ import ProjectCard from './ProjectCard';
 export default function SelectedWork({ onOpen }: { onOpen: (p: Project) => void }) {
   const desktop = useDesktop();
   const reduced = useReducedMotionPref();
-  return desktop && !reduced ? <PinnedWork onOpen={onOpen} /> : <RailWork onOpen={onOpen} />;
+  const fine = useFinePointer();
+  // Touch tablets (iPad landscape) get the native rail, not the long pinned scroll
+  return desktop && fine && !reduced ? <PinnedWork onOpen={onOpen} /> : <RailWork onOpen={onOpen} />;
 }
 
 function Intro() {
@@ -25,7 +27,7 @@ function Intro() {
       </p>
       <RevealText as="h2" text="SELECTED WORK" className="font-display text-[clamp(2.8rem,8vw,7rem)] leading-[0.88] text-bone" />
       <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-mist">
-        Enterprise platforms and shipped product work — robotics SaaS, ESG, contracts, orchestration, and this public portfolio. Open any card for the full case study.
+        Enterprise platforms and shipped product work — robotics scanning, ESG, apparel commerce, standards library, and this public portfolio. Open any card for the full case study.
       </p>
       <p className="mt-6 hidden text-xs tracking-[0.24em] text-smoke lg:block">SCROLL TO BROWSE →</p>
       <p className="mt-4 text-xs tracking-[0.2em] text-smoke lg:hidden">Swipe sideways for projects · scroll page normally</p>
@@ -40,7 +42,7 @@ function Outro() {
       target="_blank"
       rel="noreferrer"
       data-cursor="link"
-      className="group flex aspect-[3/4] w-[78vw] shrink-0 snap-start flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/15 text-center transition hover:border-signal/60 sm:w-[44vw] lg:aspect-auto lg:h-[66vh] lg:w-[24vw]"
+      className="group flex aspect-[3/4] w-[78vw] shrink-0 snap-start flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-white/15 text-center transition hover:border-signal/60 sm:w-[44vw] lg:aspect-auto lg:h-[66svh] lg:w-[24vw]"
     >
       <motion.span
         className="flex h-16 w-16 items-center justify-center rounded-full border border-white/25 text-2xl text-bone transition group-hover:border-signal group-hover:text-signal"
@@ -85,8 +87,8 @@ function PinnedWork({ onOpen }: { onOpen: (p: Project) => void }) {
   const glow = useTransform(scrollYProgress, [0, 0.5, 1], [0.08, 0.16, 0.08]);
 
   return (
-    <div ref={wrap} style={{ height: `calc(100vh + ${dist}px)` }} className="relative">
-      <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
+    <div ref={wrap} style={{ height: `calc(100svh + ${dist}px)` }} className="relative">
+      <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
         <motion.div
           aria-hidden
           className="absolute inset-0 bg-[radial-gradient(50%_60%_at_70%_50%,rgba(45,212,191,0.14),transparent_70%)]"

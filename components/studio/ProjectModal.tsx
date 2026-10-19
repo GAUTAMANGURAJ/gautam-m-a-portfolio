@@ -2,18 +2,24 @@
 
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { projects, type Project } from '@/lib/content/portfolio';
+import type { Project } from '@/lib/content/portfolio';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useScrollLock } from '@/hooks/smoothScroll';
-import { EASE, Magnetic } from './fx';
-import { ProjectPoster, SystemBlueprint } from './Poster';
+import { EASE } from './fx';
+import { ProjectPoster } from './Poster';
+import CaseStudyContent from './CaseStudyContent';
 
-const block = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease: EASE } },
-};
-
-export default function ProjectModal({ project, onClose, onSwitch }: { project: Project; onClose: () => void; onSwitch: (p: Project) => void }) {
+export default function ProjectModal({
+  project,
+  onClose,
+  onSwitch,
+  onAsk,
+}: {
+  project: Project;
+  onClose: () => void;
+  onSwitch: (p: Project) => void;
+  onAsk?: (p: Project) => void;
+}) {
   useScrollLock(true);
   const root = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -35,8 +41,6 @@ export default function ProjectModal({ project, onClose, onSwitch }: { project: 
     scroller.current?.scrollTo({ top: 0 });
   }, [project.id]);
 
-  const more = projects.filter((p) => p.id !== project.id);
-
   return (
     <motion.div
       ref={root}
@@ -46,24 +50,42 @@ export default function ProjectModal({ project, onClose, onSwitch }: { project: 
       aria-labelledby={`title-${project.id}-modal`}
     >
       <motion.div
-        className="absolute inset-0 bg-black/80 backdrop-blur-md"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/85"
+        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+        animate={{ opacity: 1, backdropFilter: 'blur(14px)' }}
+        exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+        transition={{ duration: 0.6, ease: EASE }}
         onClick={onClose}
       />
       <div ref={scroller} data-lenis-prevent className="absolute inset-0 overflow-y-auto overscroll-contain" onClick={onClose}>
         <motion.div
           className="relative mx-auto min-h-full max-w-5xl bg-ink-2 shadow-2xl sm:my-10 sm:min-h-0 sm:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
+          // Opacity-only: a transformed ancestor would distort the shared-element (layoutId) handoff
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, y: 30, transition: { duration: 0.3 } }}
+          transition={{ duration: 0.5, ease: EASE }}
+          exit={{ opacity: 0, transition: { duration: 0.3 } }}
         >
-          <div className="relative h-[52vh] min-h-[340px] overflow-hidden sm:rounded-t-2xl">
-            <motion.div layoutId={`art-${project.id}`} className="absolute inset-0" transition={{ duration: 0.7, ease: EASE }}>
+          <div className="relative h-[52svh] min-h-[340px] overflow-hidden sm:rounded-t-2xl">
+            <motion.div
+              layoutId={`art-${project.id}`}
+              className="absolute inset-0"
+              initial={{ filter: 'blur(12px) brightness(1.5)' }}
+              animate={{ filter: 'blur(0px) brightness(1)' }}
+              transition={{ duration: 0.8, ease: EASE }}
+            >
               <ProjectPoster project={project} />
             </motion.div>
+            {/* Accent burst as the card opens into the case study */}
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[120%] w-[120%] -translate-x-1/2 -translate-y-1/2 rounded-full mix-blend-screen"
+              style={{ background: `radial-gradient(closest-side, ${project.palette.accent}66, transparent 70%)` }}
+              initial={{ scale: 0.3, opacity: 0.9 }}
+              animate={{ scale: 1.5, opacity: 0 }}
+              transition={{ duration: 1.2, ease: EASE }}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-ink-2 via-ink-2/30 to-transparent" />
             <button
               ref={closeBtn}
@@ -71,7 +93,7 @@ export default function ProjectModal({ project, onClose, onSwitch }: { project: 
               onClick={onClose}
               data-cursor="close"
               aria-label="Close project"
-              className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-lg text-bone backdrop-blur transition hover:bg-black"
+              className="absolute right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-lg text-bone backdrop-blur transition hover:bg-black"
             >
               ✕
             </button>
@@ -90,169 +112,7 @@ export default function ProjectModal({ project, onClose, onSwitch }: { project: 
             </div>
           </div>
 
-          <motion.div className="px-5 pb-12 sm:px-10" initial="hidden" animate="show" transition={{ staggerChildren: 0.08, delayChildren: 0.25 }}>
-            <motion.div variants={block} className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-mist">
-              <span className="font-semibold text-signal-2">{project.year}</span>
-              <span className="h-1 w-1 rounded-full bg-smoke" />
-              <span>{project.genre}</span>
-            </motion.div>
-
-            <motion.p variants={block} className="mt-4 max-w-3xl text-lg leading-relaxed text-bone sm:text-xl">
-              {project.logline}
-            </motion.p>
-
-            {(project.github || project.live || project.accessNote) && (
-              <motion.div variants={block} className="mt-6 flex flex-wrap items-center gap-3">
-                {project.github && (
-                  <Magnetic>
-                    <a
-                      href={project.github}
-                      target="_blank"
-                      rel="noreferrer"
-                      data-cursor="link"
-                      className="flex min-h-12 items-center gap-2 rounded-md bg-bone px-6 text-[15px] font-bold text-ink transition hover:bg-white"
-                    >
-                      GitHub ↗
-                    </a>
-                  </Magnetic>
-                )}
-                {project.live && (
-                  <Magnetic>
-                    <a
-                      href={project.live}
-                      target="_blank"
-                      rel="noreferrer"
-                      data-cursor="link"
-                      className="glass flex min-h-12 items-center gap-2 rounded-md px-6 text-[15px] font-semibold text-bone transition hover:bg-white/15"
-                    >
-                      Live ↗
-                    </a>
-                  </Magnetic>
-                )}
-                {project.accessNote && (
-                  <p className="rounded-xl border border-white/10 bg-ink/50 px-4 py-3 text-sm text-mist">
-                    {project.accessNote}
-                  </p>
-                )}
-              </motion.div>
-            )}
-
-            <motion.section variants={block} className="mt-10">
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal">Case study</h3>
-              <p
-                className="mb-4 rounded-xl border px-4 py-3 text-sm font-semibold tracking-wide"
-                style={{
-                  borderColor: `${project.palette.accent}55`,
-                  color: project.palette.accent,
-                  background: `${project.palette.accent}12`,
-                }}
-              >
-                {project.caseStudy.proof}
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {(
-                  [
-                    { k: 'Problem', v: project.caseStudy.problem },
-                    { k: 'My role', v: project.caseStudy.role },
-                    { k: 'Outcome', v: project.caseStudy.outcome },
-                  ] as const
-                ).map((item) => (
-                  <div
-                    key={item.k}
-                    className="rounded-2xl border border-white/10 bg-ink/40 p-4 sm:p-5"
-                    style={{ boxShadow: `inset 0 0 0 1px ${project.palette.accent}18` }}
-                  >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-smoke">{item.k}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-bone/90">{item.v}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.section>
-
-            <motion.section variants={block} className="mt-8">
-              <SystemBlueprint stages={project.systemFlow} accent={project.palette.accent} />
-            </motion.section>
-
-            <motion.section variants={block} className="mt-12">
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal">Result / Impact</h3>
-              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/10 sm:grid-cols-3 lg:grid-cols-4">
-                {project.metrics.map((m, i) => (
-                  <motion.div
-                    key={m.label}
-                    className="bg-ink p-4 sm:p-5"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 + i * 0.07, duration: 0.5, ease: EASE }}
-                  >
-                    <p className="font-display text-4xl leading-none text-bone sm:text-5xl" style={{ color: i === 0 ? project.palette.accent : undefined }}>
-                      {m.value}
-                    </p>
-                    <p className="mt-2 text-xs leading-snug text-mist">{m.label}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.section>
-
-            <div className="mt-12 grid gap-10 lg:grid-cols-[3fr_2fr]">
-              <motion.section variants={block}>
-                <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal">My Contribution</h3>
-                <ul className="space-y-4">
-                  {project.build.map((b) => (
-                    <li key={b} className="flex gap-3 text-[15px] leading-relaxed text-bone/85">
-                      <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: project.palette.accent }} />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              </motion.section>
-              <div className="space-y-10">
-                <motion.section variants={block}>
-                  <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal">Tech Stack</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {project.stack.map((t) => (
-                      <span key={t} className="glass rounded-full px-3 py-1.5 text-sm font-medium text-bone">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </motion.section>
-                <motion.section variants={block}>
-                  <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-signal">Key Features</h3>
-                  <ul className="space-y-2.5">
-                    {project.features.map((f) => (
-                      <li key={f} className="flex items-start gap-3 text-sm text-bone/85">
-                        <span className="text-signal">✓</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </motion.section>
-              </div>
-            </div>
-
-            <motion.section variants={block} className="mt-14 border-t border-white/10 pt-8">
-              <h3 className="mb-4 font-sans text-lg font-semibold text-bone">More Work</h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {more.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    data-cursor="view"
-                    onClick={() => onSwitch(p)}
-                    className="group relative aspect-video overflow-hidden rounded-xl text-left ring-1 ring-white/10 transition hover:ring-white/30"
-                  >
-                    <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-110">
-                      <ProjectPoster project={p} />
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-mist">{p.genre}</p>
-                      <p className="font-display text-3xl leading-none tracking-wide text-bone">{p.title}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </motion.section>
-          </motion.div>
+          <CaseStudyContent project={project} onSwitch={onSwitch} onAsk={onAsk} />
         </motion.div>
       </div>
     </motion.div>

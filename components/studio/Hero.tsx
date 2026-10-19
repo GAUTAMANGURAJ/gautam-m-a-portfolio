@@ -1,16 +1,16 @@
 'use client';
 
 import { useRef } from 'react';
-import { motion, useMotionValue, useScroll, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionTemplate, useMotionValue, useScroll, useSpring, useTransform } from 'framer-motion';
 import { achievements, experience, profile, projects, type ProfileId } from '@/lib/content/portfolio';
 import { useFinePointer, useReducedMotionPref } from '@/hooks/useMedia';
 import { useSmoothScroll } from '@/hooks/smoothScroll';
-import { EASE, Magnetic, Particles } from './fx';
+import { CountUp, EASE, Magnetic, Particles } from './fx';
 import { StudioMark } from './Poster';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } };
 const item = {
-  hidden: { opacity: 0, y: 32, filter: 'blur(12px)' },
+  hidden: { opacity: 0, y: 32, filter: 'blur(6px)' },
   show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.95, ease: EASE } },
 };
 
@@ -24,7 +24,12 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
   // Softer parallax on touch / reduced-motion (less compositor work)
   const soft = reduced || !fine;
   const imgY = useTransform(scrollYProgress, [0, 1], ['0%', soft ? '5%' : '20%']);
-  const imgScale = useTransform(scrollYProgress, [0, 1], [1, soft ? 1.03 : 1.14]);
+  // Dolly-out: the portrait recedes while the title tracks wide and drifts back
+  const imgScale = useTransform(scrollYProgress, [0, 1], [1, soft ? 0.96 : 0.86]);
+  const imgBlur = useTransform(scrollYProgress, [0.2, 1], [0, soft ? 0 : 6]);
+  const imgFilter = useMotionTemplate`blur(${imgBlur}px)`;
+  const titleTrack = useTransform(scrollYProgress, [0, 0.7], ['0.02em', soft ? '0.07em' : '0.2em']);
+  const titleScale = useTransform(scrollYProgress, [0, 0.7], [1, soft ? 1.04 : 1.12]);
   const textY = useTransform(scrollYProgress, [0, 1], ['0%', soft ? '-8%' : '-32%']);
   const fade = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
   const blackout = useTransform(scrollYProgress, [0.35, 1], [0, 1]);
@@ -44,15 +49,15 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
   const meta = [
     experience[0].period.split(' – ')[0] + ' – Present',
     'B.E. CSE',
-    `${projects.length} Projects`,
+    `${projects.length} case studies`,
     achievements[0].title,
   ];
 
   const floating = [
-    { text: achievements[0].title, sub: achievements[0].org, pos: 'left-[2%] top-[30%]', depth: 1 },
-    { text: '87 / 90', sub: 'High-severity defects resolved', pos: 'right-[0%] top-[18%]', depth: -1 },
-    { text: 'Robotics SaaS · Sole owner', sub: 'Backoffice + client portal', pos: 'left-[4%] bottom-[28%]', depth: 0.8 },
-    { text: 'React · Next · TS', sub: 'Primary stack', pos: 'right-[4%] bottom-[24%]', depth: 0.6 },
+    { text: achievements[0].title, sub: achievements[0].org, pos: 'left-[6%] top-[47%]', depth: 1 },
+    { text: 'Quality ownership', sub: 'Led defect resolution', pos: 'right-[0%] top-[44%]', depth: -1 },
+    { text: 'Robotics scanning · Sole FE', sub: 'Backoffice + client · theme L/D/S', pos: 'left-[4%] bottom-[28%]', depth: 0.8 },
+    { text: 'React · TypeScript', sub: 'Enterprise frontend systems', pos: 'right-[4%] bottom-[24%]', depth: 0.6 },
   ];
 
   return (
@@ -69,11 +74,11 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
     >
       <motion.div aria-hidden className="absolute inset-0" style={{ x: glowX }}>
         <motion.div
-          className="absolute right-[-10%] top-[-10%] h-[90vh] w-[80vw] rounded-full bg-[radial-gradient(closest-side,rgba(45,212,191,0.34),rgba(45,212,191,0.08)_55%,transparent)] blur-2xl lg:right-[-4%] lg:w-[60vw]"
+          className="absolute right-[-10%] top-[-10%] h-[90svh] w-[80vw] rounded-full bg-[radial-gradient(closest-side,rgba(45,212,191,0.34),rgba(45,212,191,0.08)_55%,transparent)] blur-2xl lg:right-[-4%] lg:w-[60vw]"
           animate={reduced ? undefined : { opacity: [0.7, 1, 0.75], scale: [1, 1.04, 1] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <div className="absolute bottom-[-20%] left-[-10%] h-[70vh] w-[60vw] rounded-full bg-[radial-gradient(closest-side,rgba(212,165,116,0.18),transparent)] blur-2xl" />
+        <div className="absolute bottom-[-20%] left-[-10%] h-[70svh] w-[60vw] rounded-full bg-[radial-gradient(closest-side,rgba(212,165,116,0.18),transparent)] blur-2xl" />
       </motion.div>
 
       <motion.div
@@ -97,10 +102,10 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
 
       <motion.div
         className="absolute inset-x-0 top-[max(3.25rem,env(safe-area-inset-top))] z-[2] flex h-[42svh] items-end justify-center sm:top-12 sm:h-[66svh] lg:bottom-0 lg:left-auto lg:right-[3vw] lg:top-20 lg:h-auto lg:w-[54vw] xl:right-[6vw] xl:w-[48vw]"
-        style={{ y: imgY, scale: imgScale, opacity: fade }}
+        style={{ y: imgY, scale: imgScale, opacity: fade, filter: imgFilter }}
       >
         <motion.div
-          className="relative h-full w-full lg:h-[86vh]"
+          className="relative h-full w-full lg:h-[86svh]"
           style={{ rotateY: imgRotY, rotateX: imgRotX, x: imgShiftX, transformPerspective: 1200 }}
           initial={{ clipPath: 'inset(100% -30% -10% -30%)', opacity: 0 }}
           animate={{ clipPath: 'inset(-30% -30% -10% -30%)', opacity: 1 }}
@@ -135,39 +140,12 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
         </motion.div>
       </motion.div>
 
-      {/* Mobile impact chips — swipeable strip (desktop chips float on portrait) */}
-      <motion.div
-        className="absolute inset-x-0 top-[44svh] z-[4] md:hidden"
-        style={{ opacity: fade }}
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 0.7, ease: EASE }}
-      >
-        <div
-          data-lenis-prevent
-          className="rail flex gap-2.5 overflow-x-auto px-4 pb-1"
-        >
-          {floating.slice(0, 3).map((f, i) => (
-            <motion.div
-              key={f.text}
-              className="glass min-w-[10.5rem] shrink-0 rounded-xl px-3 py-2"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.1 + i * 0.08, duration: 0.55, ease: EASE }}
-            >
-              <p className="text-sm font-semibold text-bone">{f.text}</p>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-mist">{f.sub}</p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
       <div aria-hidden className="absolute inset-x-0 top-[28svh] z-[3] h-[38svh] bg-gradient-to-b from-transparent via-ink/80 to-ink sm:top-[40svh] sm:h-[36svh] lg:hidden" />
       <div aria-hidden className="absolute inset-0 z-[3] hidden bg-[linear-gradient(90deg,var(--color-ink)_0%,rgba(6,9,16,0.7)_32%,transparent_58%)] lg:block" />
       <div aria-hidden className="absolute inset-x-0 bottom-0 z-[3] h-40 bg-gradient-to-t from-ink to-transparent sm:h-48" />
 
       <motion.div
-        className="gutter relative z-[4] flex min-h-[100svh] flex-col justify-end pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-[46svh] sm:pb-20 sm:pt-[58svh] lg:max-w-[52vw] lg:justify-center lg:pb-0 lg:pt-24"
+        className="gutter relative z-[4] flex min-h-[100svh] flex-col justify-end pb-[max(3.5rem,env(safe-area-inset-bottom))] pt-[46svh] [@media(max-height:520px)]:pt-24 sm:pb-20 sm:pt-[58svh] lg:max-w-[52vw] lg:justify-center lg:pb-0 lg:pt-24"
         style={{ y: textY, opacity: fade }}
         variants={container}
         initial="hidden"
@@ -176,10 +154,10 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
         <motion.div variants={item} className="mb-2 text-base sm:mb-3 sm:text-lg">
           <StudioMark />
         </motion.div>
-        <motion.h1 variants={item} className="font-display leading-[0.82] tracking-[0.02em] text-bone" style={{ fontSize: 'clamp(4rem, 12vw, 11rem)' }}>
+        <motion.h1 variants={item} className="font-display leading-[0.82] tracking-[0.02em] text-bone" style={{ fontSize: 'clamp(3.25rem, 14vw, 11rem)', letterSpacing: titleTrack, scale: titleScale, transformOrigin: 'left center' }}>
           <span className="shimmer-text">{profile.firstName}</span>
         </motion.h1>
-        <motion.p variants={item} className="mt-1 font-sans text-sm font-bold tracking-[0.5em] text-signal sm:tracking-[0.62em] sm:text-base">
+        <motion.p variants={item} className="mt-1 font-sans text-sm font-bold tracking-[0.32em] text-signal xs:tracking-[0.5em] sm:tracking-[0.62em] sm:text-base">
           {profile.studioTag}
         </motion.p>
 
@@ -200,6 +178,28 @@ export default function Hero({ onPlay, onResume, profileId }: { onPlay: () => vo
         <motion.p variants={item} className="mt-3 max-w-xl text-[14px] leading-relaxed text-bone/80 sm:mt-4 sm:text-base">
           {profile.intro}
         </motion.p>
+
+        <motion.p
+          variants={item}
+          className="mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-signal/30 bg-signal/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-signal sm:text-[11px]"
+        >
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal opacity-50" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-signal" />
+          </span>
+          Open to thoughtful product work
+        </motion.p>
+
+        <motion.div variants={item} className="-mx-[var(--gutter)] mt-5 md:hidden [@media(max-height:520px)]:hidden">
+          <div data-lenis-prevent role="region" aria-label="Key highlights — scroll sideways" tabIndex={0} className="rail flex gap-2.5 overflow-x-auto px-[var(--gutter)] pb-1">
+            {floating.slice(0, 3).map((f) => (
+              <div key={f.text} className="glass min-w-[10.5rem] shrink-0 snap-start rounded-xl px-3 py-2">
+                <p className="text-sm font-semibold text-bone"><CountUp value={f.text} /></p>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-mist">{f.sub}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
         <motion.div variants={item} className="mt-6 flex w-full flex-col gap-2.5 sm:mt-8 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
           <Magnetic className="w-full sm:w-auto">
@@ -295,7 +295,7 @@ function FloatChip({
       transition={{ duration: 0.9, delay: 1.15 + index * 0.16, ease: EASE }}
     >
       <motion.div animate={reduced ? undefined : { y: [0, -7, 0] }} transition={{ duration: 4.5 + index, repeat: Infinity, ease: 'easeInOut' }}>
-        <p className="text-sm font-semibold text-bone">{text}</p>
+        <p className="text-sm font-semibold text-bone"><CountUp value={text} /></p>
         <p className="text-[10px] uppercase tracking-[0.2em] text-mist">{sub}</p>
       </motion.div>
     </motion.div>

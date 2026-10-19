@@ -1,10 +1,33 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode, type PointerEvent as RPointerEvent } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { useEffect, useRef, useState, type ReactNode, type PointerEvent as RPointerEvent } from 'react';
+import { animate, motion, useInView, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useFinePointer, useReducedMotionPref } from '@/hooks/useMedia';
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
+
+/** Feeds pointer position to every `.spot` card as --mx / --my (one delegated listener). */
+export function useSpotlight(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return;
+    let raf = 0;
+    const onMove = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.('.spot') as HTMLElement | null;
+      if (!el) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        el.style.setProperty('--my', `${e.clientY - r.top}px`);
+      });
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('pointermove', onMove);
+    };
+  }, [enabled]);
+}
 
 /** Wraps a control so it drifts toward the pointer — desktop only. */
 export function Magnetic({ children, strength = 0.35, className = '' }: { children: ReactNode; strength?: number; className?: string }) {
@@ -78,7 +101,10 @@ export function Tilt({
   );
 }
 
-/** Word-by-word blur-to-focus reveal for headings. */
+/**
+ * Kinetic headline — each letter rises out of a mask with a slight tilt and a
+ * one-off teal flash as it lands. Words stay unbroken so wrapping is unchanged.
+ */
 export function RevealText({
   text,
   className = '',
@@ -94,6 +120,8 @@ export function RevealText({
 }) {
   const Tag = motion[as];
   const words = text.split(' ');
+  // Keep total stagger bounded so long titles don't feel slow
+  const perChar = Math.min(0.03, 0.55 / Math.max(text.length, 1));
   return (
     <Tag
       id={id}
@@ -101,24 +129,79 @@ export function RevealText({
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: '-4% 0px' }}
-      transition={{ staggerChildren: 0.06, delayChildren: delay }}
+      transition={{ staggerChildren: perChar, delayChildren: delay }}
       aria-label={text}
     >
-      {words.map((w, i) => (
-        <span key={i} aria-hidden className="inline-block overflow-hidden pb-[0.08em] align-bottom">
-          <motion.span
-            className="inline-block"
-            variants={{
-              hidden: { y: '105%', opacity: 0, filter: 'blur(8px)' },
-              show: { y: '0%', opacity: 1, filter: 'blur(0px)', transition: { duration: 0.9, ease: EASE } },
-            }}
-          >
-            {w}
-            {i < words.length - 1 ? '\u00A0' : ''}
-          </motion.span>
+      {words.map((w, wi) => (
+        <span key={wi} aria-hidden className="inline-block whitespace-nowrap align-bottom">
+          {Array.from(w).map((ch, ci) => (
+            <span key={ci} className="inline-block overflow-hidden pb-[0.1em] align-bottom">
+              <motion.span
+                className="inline-block origin-bottom-left"
+                variants={{
+                  hidden: { y: '110%', rotate: 7, opacity: 0, filter: 'blur(6px)' },
+                  show: {
+                    y: '0%',
+                    rotate: 0,
+                    opacity: 1,
+                    filter: 'blur(0px)',
+                    color: ['#5eead4', '#e8eef8'],
+                    transition: {
+                      duration: 0.85,
+                      ease: EASE,
+                      color: { duration: 1.1, times: [0, 1] },
+                    },
+                  },
+                }}
+              >
+                {ch}
+              </motion.span>
+            </span>
+          ))}
+          {wi < words.length - 1 ? '\u00A0' : ''}
         </span>
       ))}
     </Tag>
+  );
+}
+
+/** Counts the first number inside `value` up from zero once it scrolls into view. */
+export function CountUp({ value, className = '', duration = 1.6 }: { value: string; className?: string; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: '0px 0px -8% 0px' });
+  const reduced = useReducedMotionPref();
+  const match = value.match(/\d[\d,]*(?:\.\d+)?/);
+  const target = match ? parseFloat(match[0].replace(/,/g, '')) : 0;
+  const decimals = match ? (match[0].split('.')[1] || '').length : 0;
+  const commas = match ? match[0].includes(',') : false;
+  const counts = Boolean(match) && target >= 2 && !reduced;
+  const fmt = (n: number) => {
+    const t = n.toFixed(decimals);
+    return commas ? Number(t).toLocaleString('en-US', { minimumFractionDigits: decimals }) : t;
+  };
+  const [shown, setShown] = useState(() => (counts && match ? value.replace(match[0], fmt(0)) : value));
+
+  useEffect(() => {
+    if (!counts || !match) {
+      setShown(value);
+      return;
+    }
+    if (!inView) return;
+    const controls = animate(0, target, {
+      duration,
+      ease: EASE,
+      onUpdate: (v) => setShown(value.replace(match[0], fmt(v))),
+      onComplete: () => setShown(value),
+    });
+    return () => controls.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, counts, value, target, duration]);
+
+  return (
+    <span ref={ref} className={`tabular-nums ${className}`}>
+      <span aria-hidden>{shown}</span>
+      <span className="sr-only">{value}</span>
+    </span>
   );
 }
 

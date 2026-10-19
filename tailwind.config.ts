@@ -9,7 +9,17 @@ const config: Config = {
     './hooks/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {
+      xs: '420px',
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
+      // Tailwind 3.3 ships no min-h-9…min-h-14; touch-target sizes across the site rely on them
+      minHeight: ({ theme }) => ({ ...theme('spacing') }),
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['var(--font-display)', 'Impact', 'sans-serif'],

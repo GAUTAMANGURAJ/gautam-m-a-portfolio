@@ -24,6 +24,11 @@ function readStoredTheme(): ThemeId {
   return 'interface';
 }
 
+const menuItem = {
+  hidden: { opacity: 0, y: 18, filter: 'blur(6px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: EASE } },
+};
+
 export default function Navbar({
   order,
   profileId,
@@ -38,7 +43,8 @@ export default function Navbar({
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pathOpen, setPathOpen] = useState(false);
-  const [active, setActive] = useState<SectionId | null>(null);
+  const [active, setActive] = useState<string | null>(null);
+  const [kbd, setKbd] = useState('Ctrl K');
   const [theme, setTheme] = useState<ThemeId>('interface');
   const pathRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -49,6 +55,14 @@ export default function Navbar({
   useEffect(() => {
     setTheme(readStoredTheme());
     setMounted(true);
+    setKbd(/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K');
+  }, []);
+
+  // The command palette can flip the accent theme without owning its state
+  useEffect(() => {
+    const toggle = () => setTheme((t) => (t === 'interface' ? 'ember' : 'interface'));
+    window.addEventListener('portfolio:toggle-theme', toggle);
+    return () => window.removeEventListener('portfolio:toggle-theme', toggle);
   }, []);
 
   useEffect(() => {
@@ -68,7 +82,8 @@ export default function Navbar({
       setScrolled(y > 24);
       if (y > prev + 8) setPathOpen(false);
       prev = y;
-      for (const id of [...order].reverse()) {
+      // Contact is the last section but isn't part of `order`, so include it explicitly
+      for (const id of [...order, 'contact'].reverse()) {
         const el = document.getElementById(id);
         if (!el) continue;
         if (el.getBoundingClientRect().top <= 120) {
@@ -119,15 +134,19 @@ export default function Navbar({
         }`}
       >
         <div
-          className={`pointer-events-auto relative mx-auto mt-2 flex h-14 max-w-6xl items-center justify-between gap-3 rounded-2xl border px-3 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-[background-color,border-color] duration-300 sm:mt-3 sm:h-[3.75rem] sm:px-4 ${
+          className={`nav-surface pointer-events-auto relative mx-auto flex max-w-6xl items-center justify-between gap-2 rounded-2xl border px-2.5 backdrop-blur-xl transition-[height,margin,border-color,box-shadow] duration-500 ease-cine xs:gap-3 sm:px-4 ${
             scrolled || menuOpen
-              ? 'border-white/14 bg-ink/95'
-              : 'border-white/10 bg-ink/78'
+              ? 'mt-1.5 h-[3.25rem] border-signal/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_18px_48px_rgba(0,0,0,0.65),0_0_0_1px_rgba(45,212,191,0.06)] sm:mt-2 sm:h-14'
+              : 'mt-2.5 h-14 border-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_12px_36px_rgba(0,0,0,0.5)] sm:mt-3 sm:h-[3.75rem]'
           }`}
         >
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-signal/50 to-transparent"
+            className="nav-sheen pointer-events-none absolute inset-x-5 top-0 h-px"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
           />
 
           <button
@@ -140,10 +159,10 @@ export default function Navbar({
               <StudioMark className="!gap-0 [&_span]:hidden [&_svg]:h-5 [&_svg]:w-5" />
             </span>
             <span className="flex min-w-0 flex-col items-start leading-none">
-              <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-smoke transition group-hover:text-mist">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-smoke transition group-hover:text-mist">
                 Studio
               </span>
-              <span className="truncate text-[15px] tracking-wide">{profile.firstName}</span>
+              <span className="truncate text-sm tracking-wide xs:text-[15px]">{profile.firstName}</span>
             </span>
           </button>
 
@@ -175,13 +194,34 @@ export default function Navbar({
               type="button"
               onClick={() => scrollTo('#contact')}
               data-cursor="link"
-              className="rounded-full px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-mist transition hover:text-bone"
+              className={`relative rounded-full px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] transition ${
+                active === 'contact' ? 'text-bone' : 'text-mist hover:text-bone'
+              }`}
             >
-              Contact
+              {active === 'contact' && (
+                <motion.span
+                  layoutId="nav-pill"
+                  className="absolute inset-0 rounded-full border border-signal/30 bg-signal/10"
+                  transition={{ duration: 0.4, ease: EASE }}
+                />
+              )}
+              <span className="relative z-10">Contact</span>
             </button>
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('portfolio:open-palette'))}
+              className="hidden items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-mist transition hover:border-signal/35 hover:bg-signal/10 hover:text-bone lg:inline-flex"
+              aria-label="Search and jump to anything"
+              title="Search and jump"
+              data-cursor="link"
+            >
+              <span aria-hidden>⌕</span>
+              <kbd className="font-sans normal-case tracking-normal text-smoke">{kbd}</kbd>
+            </button>
+
             <button
               type="button"
               onClick={() => setTheme((t) => (t === 'interface' ? 'ember' : 'interface'))}
@@ -212,7 +252,7 @@ export default function Navbar({
               >
                 <ProfileAvatar id={profileId} size="sm" />
                 <span className="flex min-w-[5.5rem] flex-col items-start text-left leading-none">
-                  <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-smoke">Path</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-smoke">Path</span>
                   <span className="mt-1 text-xs font-semibold text-bone">{current.name}</span>
                 </span>
                 <motion.span
@@ -252,7 +292,7 @@ export default function Navbar({
                     />
                     <div className="relative mb-1.5 flex items-center justify-between px-2.5 pt-1.5">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-smoke">Choose path</p>
-                      <span className="rounded-full bg-signal/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-signal">
+                      <span className="rounded-full bg-signal/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-signal">
                         Live
                       </span>
                     </div>
@@ -286,7 +326,7 @@ export default function Navbar({
                                 <span className="flex items-center gap-2">
                                   <span className="text-sm font-semibold text-bone">{p.name}</span>
                                   {selected && (
-                                    <span className="rounded-full bg-signal/20 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-signal">
+                                    <span className="rounded-full bg-signal/20 px-1.5 py-px text-[10px] font-bold uppercase tracking-wider text-signal">
                                       Active
                                     </span>
                                   )}
@@ -309,27 +349,39 @@ export default function Navbar({
               </AnimatePresence>
             </div>
 
-            <button
+            <motion.button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/12 bg-white/[0.03] text-bone transition hover:border-white/25 hover:bg-ink-2 lg:hidden"
+              whileTap={{ scale: 0.92 }}
+              className={`relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border text-bone transition-colors duration-300 lg:hidden ${
+                menuOpen
+                  ? 'border-signal/45 bg-signal/15 shadow-[0_0_22px_rgba(45,212,191,0.25)]'
+                  : 'border-white/14 bg-white/[0.05] hover:border-white/28 hover:bg-white/[0.09]'
+              }`}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
               onClick={() => {
                 setMenuOpen((v) => !v);
                 setPathOpen(false);
               }}
             >
-              <span className="relative block h-3.5 w-4" aria-hidden>
+              <span className="relative block h-3.5 w-[18px]" aria-hidden>
                 <span
-                  className={`absolute left-0 h-px w-full bg-current transition ${menuOpen ? 'top-1.5 rotate-45' : 'top-0'}`}
+                  className={`absolute left-0 h-[1.5px] rounded-full bg-current transition-all duration-500 ease-cine ${
+                    menuOpen ? 'top-[6px] w-full rotate-45' : 'top-0 w-full'
+                  }`}
                 />
                 <span
-                  className={`absolute left-0 top-1.5 h-px w-full bg-current transition ${menuOpen ? 'opacity-0' : 'opacity-100'}`}
+                  className={`absolute left-0 top-[6px] h-[1.5px] rounded-full bg-current transition-all duration-300 ease-cine ${
+                    menuOpen ? 'w-0 opacity-0' : 'w-3/4 opacity-100'
+                  }`}
                 />
                 <span
-                  className={`absolute left-0 h-px w-full bg-current transition ${menuOpen ? 'top-1.5 -rotate-45' : 'top-3'}`}
+                  className={`absolute left-0 h-[1.5px] rounded-full bg-current transition-all duration-500 ease-cine ${
+                    menuOpen ? 'top-[6px] w-full -rotate-45' : 'top-[12px] w-1/2'
+                  }`}
                 />
               </span>
-            </button>
+            </motion.button>
           </div>
         </div>
       </header>
@@ -341,23 +393,33 @@ export default function Navbar({
             role="dialog"
             aria-modal="true"
             aria-label="Navigation menu"
-            className="fixed inset-0 z-[90] flex flex-col bg-ink/98 lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] flex flex-col overflow-hidden lg:hidden"
+            style={{
+              background:
+                'radial-gradient(90% 55% at 85% 0%, rgba(45,212,191,0.14), transparent 60%), radial-gradient(70% 45% at 0% 100%, rgba(212,165,116,0.10), transparent 60%), linear-gradient(180deg, #0a101d 0%, #060910 100%)',
+            }}
+            initial={{ opacity: 0, clipPath: 'inset(0 0 100% 0)' }}
+            animate={{ opacity: 1, clipPath: 'inset(0 0 0% 0)' }}
+            exit={{ opacity: 0, clipPath: 'inset(0 0 100% 0)' }}
+            transition={{ duration: 0.5, ease: EASE }}
           >
             {/* Leave room for the fixed header + hamburger */}
-            <div className="shrink-0" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4.75rem)' }} aria-hidden />
+            <div className="shrink-0" style={{ height: 'calc(env(safe-area-inset-top, 0px) + 4.5rem)' }} aria-hidden />
 
             {/* This is the only scrollable region — must stay independent of body lock */}
             <div
               data-lenis-prevent
               className="sheet-scroll gutter mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-y-contain pb-[max(2.5rem,env(safe-area-inset-bottom))]"
             >
-              <div className="flex flex-col gap-5">
-                <div>
+              <motion.div
+                className="flex flex-col gap-5"
+                initial="hidden"
+                animate="show"
+                variants={{ hidden: {}, show: { transition: { staggerChildren: 0.055, delayChildren: 0.18 } } }}
+              >
+                <motion.div variants={menuItem}>
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-smoke">Path</p>
-                  <ul className="grid grid-cols-2 gap-2">
+                  <ul className="grid grid-cols-1 gap-2 xs:grid-cols-2">
                     {viewerProfiles.map((p) => {
                       const selected = p.id === profileId;
                       return (
@@ -371,40 +433,63 @@ export default function Navbar({
                             className={`flex min-h-12 w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition ${
                               selected
                                 ? 'border-signal/40 bg-signal/10'
-                                : 'border-white/10 bg-ink-2/60 hover:border-white/20'
+                                : 'border-white/10 bg-white/[0.03] hover:border-white/20'
                             }`}
                           >
                             <ProfileAvatar id={p.id} size="sm" />
                             <span className="min-w-0">
                               <span className="block text-sm font-semibold text-bone">{p.name}</span>
-                              <span className="block truncate text-[10px] text-smoke">{p.blurb}</span>
+                              <span className="block truncate text-[11px] text-smoke">{p.blurb}</span>
                             </span>
                           </button>
                         </li>
                       );
                     })}
                   </ul>
-                </div>
+                </motion.div>
 
                 <nav className="flex flex-col gap-2" aria-label="Mobile">
-                  {order.map((id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className="min-h-12 rounded-xl border border-white/10 bg-ink-2/50 px-4 py-3.5 text-left transition hover:border-signal/30 hover:bg-ink-2"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        // Defer so unlock restores scroll position before Lenis/native jump
-                        window.setTimeout(() => scrollTo(`#${id}`), 40);
-                      }}
-                    >
-                      <span className="text-base font-semibold text-bone">{sectionMeta[id].nav}</span>
-                      <span className="mt-0.5 block text-xs text-smoke">{sectionMeta[id].meta}</span>
-                    </button>
-                  ))}
-                  <button
+                  {order.map((id, i) => {
+                    const isActive = active === id;
+                    return (
+                      <motion.button
+                        key={id}
+                        type="button"
+                        variants={menuItem}
+                        whileTap={{ scale: 0.98 }}
+                        aria-current={isActive ? 'true' : undefined}
+                        className={`group relative flex min-h-14 items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-colors ${
+                          isActive
+                            ? 'border-signal/40 bg-signal/10'
+                            : 'border-white/10 bg-white/[0.03] hover:border-signal/30 hover:bg-white/[0.06]'
+                        }`}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          // Defer so unlock restores scroll position before Lenis/native jump
+                          window.setTimeout(() => scrollTo(`#${id}`), 40);
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className={`absolute inset-y-2 left-0 w-[3px] rounded-r bg-signal transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                        />
+                        <span className="w-6 shrink-0 font-display text-sm tracking-wider text-smoke">{String(i + 1).padStart(2, '0')}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-base font-semibold text-bone">{sectionMeta[id].nav}</span>
+                          <span className="mt-0.5 block truncate text-xs text-smoke">{sectionMeta[id].meta}</span>
+                        </span>
+                        <span aria-hidden className="text-sm text-mist transition group-hover:translate-x-0.5 group-hover:text-signal">→</span>
+                      </motion.button>
+                    );
+                  })}
+                  <motion.button
                     type="button"
-                    className="min-h-12 rounded-xl border border-signal/35 bg-signal/10 px-4 py-3.5 text-left transition hover:border-signal/50 hover:bg-signal/15"
+                    variants={menuItem}
+                    whileTap={{ scale: 0.98 }}
+                    aria-current={active === 'contact' ? 'true' : undefined}
+                    className={`min-h-14 rounded-xl border px-4 py-3 text-left transition hover:border-signal/60 hover:bg-signal/15 ${
+                      active === 'contact' ? 'border-signal/70 bg-signal/20' : 'border-signal/40 bg-signal/10'
+                    }`}
                     onClick={() => {
                       setMenuOpen(false);
                       window.setTimeout(() => scrollTo('#contact'), 40);
@@ -412,17 +497,30 @@ export default function Navbar({
                   >
                     <span className="text-base font-semibold text-bone">Contact</span>
                     <span className="mt-0.5 block text-xs text-smoke">Message · LinkedIn · email</span>
-                  </button>
+                  </motion.button>
                 </nav>
 
-                <button
+                <motion.button
                   type="button"
+                  variants={menuItem}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    window.setTimeout(() => window.dispatchEvent(new CustomEvent('portfolio:open-palette')), 120);
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/12 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-mist"
+                >
+                  ⌕ Search &amp; jump
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  variants={menuItem}
                   onClick={() => setTheme((t) => (t === 'interface' ? 'ember' : 'interface'))}
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/12 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-mist"
                 >
                   Accent · {theme === 'interface' ? 'Teal' : 'Ember'}
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             </div>
           </motion.div>
         )}

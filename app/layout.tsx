@@ -2,6 +2,9 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { DM_Sans, Newsreader, Syne } from 'next/font/google';
 import Analytics from '@/components/studio/Analytics';
+import AnalyticsEvents from '@/components/studio/AnalyticsEvents';
+import JsonLd from '@/components/studio/JsonLd';
+import { homeJsonLd } from '@/lib/seo';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -20,13 +23,18 @@ const newsreader = Newsreader({
   style: ['normal', 'italic'],
   variable: '--font-serif',
   display: 'swap',
+  // Next can't compute fallback metrics for this family; skip the override to silence the build/dev error
+  adjustFontFallback: false,
 });
 
-const SITE_URL = 'https://gautamanguraj.github.io/gautam-m-a-portfolio';
-const OG_IMAGE = `${SITE_URL}/assets/portrait-hero.jpg`;
+const SITE_ORIGIN = 'https://gautamanguraj.github.io';
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/gautam-m-a-portfolio';
+const SITE_URL = `${SITE_ORIGIN}${BASE}`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  // Origin only: Next adds basePath itself, and a path here would double it in generated URLs
+  metadataBase: new URL(SITE_ORIGIN),
+  manifest: `${BASE}/manifest.webmanifest`,
   title: {
     default: 'Gautam M A — Software Engineer',
     template: '%s · Gautam M A',
@@ -47,29 +55,22 @@ export const metadata: Metadata = {
     'Portfolio',
   ],
   alternates: {
-    canonical: SITE_URL,
+    canonical: `${SITE_URL}/`,
   },
   openGraph: {
     title: 'Gautam M A — Software Engineer',
     description: 'Software Engineer · Frontend Systems · React · Next.js. Enterprise platforms, ownership, and craft.',
     type: 'website',
-    url: SITE_URL,
+    url: `${SITE_URL}/`,
     siteName: 'Gautam M A',
     locale: 'en_IN',
-    images: [
-      {
-        url: OG_IMAGE,
-        width: 819,
-        height: 905,
-        alt: 'Portrait of Gautam M A, software engineer',
-      },
-    ],
+    images: [{ url: `${SITE_URL}/og/home.png`, width: 1200, height: 630, alt: 'Gautam M A — Software Engineer · Frontend systems' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Gautam M A — Software Engineer',
     description: 'Software Engineer · Frontend Systems · React · Next.js.',
-    images: [OG_IMAGE],
+    images: [`${SITE_URL}/og/home.png`],
   },
   robots: {
     index: true,
@@ -83,8 +84,6 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
-
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/gautam-m-a-portfolio';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -101,7 +100,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-ink font-sans text-bone antialiased">
         {children}
+        <JsonLd data={homeJsonLd()} />
         <Analytics />
+        <AnalyticsEvents />
       </body>
     </html>
   );

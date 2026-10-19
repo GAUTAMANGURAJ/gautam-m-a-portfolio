@@ -25,7 +25,7 @@ export default function Achievements() {
     <>
       <SectionHeading kicker="Recognition" title="Impact" />
 
-      <div className="gutter grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [perspective:1400px]">
+      <div className="gutter grid gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2 lg:grid-cols-3 lg:[&>*:last-child:nth-child(odd)]:col-span-1 [perspective:1400px]">
         {achievements.map((a, i) => (
           <motion.div
             key={a.id}
@@ -35,13 +35,13 @@ export default function Achievements() {
             transition={{ duration: 0.9, delay: i * 0.08, ease: EASE }}
           >
             <Tilt max={8} className="group h-full rounded-2xl">
-              <article className="relative flex h-full min-h-[340px] flex-col items-center overflow-hidden rounded-2xl bg-[radial-gradient(120%_80%_at_50%_0%,#2a1f10,#0d0b08_60%,#060910)] px-5 pb-6 pt-8 text-center ring-1 ring-gold/20 transition duration-500 group-hover:ring-gold/60">
+              <article className="spot relative flex h-full min-h-[340px] flex-col items-center overflow-hidden rounded-2xl bg-[radial-gradient(120%_80%_at_50%_0%,#2a1f10,#0d0b08_60%,#060910)] px-5 pb-6 pt-8 text-center ring-1 ring-gold/20 transition duration-500 group-hover:ring-gold/60">
                 <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
                 <div aria-hidden className="absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-gold/10 blur-3xl transition duration-700 group-hover:bg-gold/25" />
                 <div className="relative flex items-center gap-1">
                   <Laurel side="l" />
                   <div className="px-1">
-                    <p className="text-[9px] font-bold uppercase leading-tight tracking-[0.24em] text-gold">{a.laurel}</p>
+                    <p className="text-[10px] font-bold uppercase leading-tight tracking-[0.24em] text-gold">{a.laurel}</p>
                   </div>
                   <Laurel side="r" />
                 </div>
@@ -66,7 +66,7 @@ export default function Achievements() {
             {certifications.map((c, i) => (
               <motion.div
                 key={c.name}
-                className="group relative flex w-[230px] shrink-0 snap-start flex-col justify-between rounded-xl bg-ink-2 p-4 ring-1 ring-white/10 transition hover:-translate-y-1 hover:ring-white/30"
+                className="spot group relative flex w-[min(230px,72vw)] shrink-0 snap-start flex-col justify-between rounded-xl bg-ink-2 p-4 ring-1 ring-white/10 transition hover:-translate-y-1 hover:ring-white/30"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

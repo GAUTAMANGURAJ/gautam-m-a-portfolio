@@ -74,11 +74,40 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
       const duration = opts.duration ?? (coarse ? 0.85 : 1.45);
       const el = typeof target === 'string' ? document.querySelector<HTMLElement>(target) : target;
       if (el === null) return;
-      if (lenisRef.current) {
-        lenisRef.current.scrollTo(el, { offset, immediate: opts.immediate, duration });
-      } else {
-        const top = typeof el === 'number' ? el : el.getBoundingClientRect().top + window.scrollY + offset;
-        window.scrollTo({ top, behavior: opts.immediate ? 'auto' : 'smooth' });
+
+      const aim = (d: number, immediate?: boolean) => {
+        if (lenisRef.current) {
+          // Code-split sections grow the page after Lenis measured it; refresh before aiming
+          // (a stale limit of 0 silently clamps every target to the top, e.g. on fresh /#contact loads).
+          lenisRef.current.resize();
+          lenisRef.current.scrollTo(el, { offset, immediate, duration: d });
+        } else {
+          const top = typeof el === 'number' ? el : el.getBoundingClientRect().top + window.scrollY + offset;
+          window.scrollTo({ top, behavior: immediate ? 'auto' : 'smooth' });
+        }
+      };
+      aim(duration, opts.immediate);
+
+      // Sections above the target lazy-load and change height while we travel, so a single aim can
+      // land short. Re-check a few times — and stand down the moment the visitor scrolls themselves.
+      if (typeof el !== 'number' && !opts.immediate) {
+        let cancelled = false;
+        const stop = () => {
+          cancelled = true;
+        };
+        const evts = ['wheel', 'touchstart', 'keydown'] as const;
+        evts.forEach((e) => window.addEventListener(e, stop, { passive: true, once: true }));
+        const cleanup = () => evts.forEach((e) => window.removeEventListener(e, stop));
+        const verify = (n: number) => {
+          if (cancelled || n >= 5) return cleanup();
+          const top = el.getBoundingClientRect().top;
+          const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+          if (Math.abs(top + offset) > 60 && !(atBottom && top > 0)) {
+            aim(0.5);
+            window.setTimeout(() => verify(n + 1), 900);
+          } else cleanup();
+        };
+        window.setTimeout(() => verify(0), duration * 1000 + 300);
       }
     },
     [coarse],

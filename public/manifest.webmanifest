@@ -1,0 +1,11 @@
+{
+  "name": "Gautam M A — Software Engineer",
+  "short_name": "Gautam M A",
+  "description": "Frontend systems portfolio — enterprise platforms, workflow engines, access and sessions.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#060910",
+  "theme_color": "#060910",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -4,6 +4,8 @@ const BASE_PATH = '/gautam-m-a-portfolio';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
+  // Each page exports as <route>/index.html so GitHub Pages serves /work/<slug>/ reliably
+  trailingSlash: true,
   basePath: BASE_PATH,
   env: {
     NEXT_PUBLIC_BASE_PATH: BASE_PATH,

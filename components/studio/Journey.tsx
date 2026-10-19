@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { AnimatePresence, motion, useMotionValue, useSpring } from 'framer-motion';
 import { chapters } from '@/lib/content/portfolio';
 import { EASE, SectionHeading } from './fx';
 import MilestoneCard from './MilestoneCard';
@@ -43,7 +43,7 @@ export default function Journey() {
 
       <div
         data-lenis-prevent
-        className="rail gutter mb-6 flex gap-2 overflow-x-auto sm:mb-8"
+        className="rail fade-x-end gutter mb-6 flex gap-2 overflow-x-auto sm:mb-8"
         role="tablist"
         aria-label="Journey chapters"
         onKeyDown={onTabKeyDown}
@@ -87,8 +87,8 @@ export default function Journey() {
           transition={{ duration: 0.55, ease: EASE }}
         >
           <div className="gutter mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h3 className="font-display text-4xl tracking-wide text-bone sm:text-5xl">
-              <span className="text-outline mr-3">CH{String(chapter.number).padStart(2, '0')}</span>
+            <h3 className="font-display text-3xl tracking-wide text-bone xs:text-4xl sm:text-5xl">
+              <span aria-hidden className="outline-label mr-3" data-text={`CH${String(chapter.number).padStart(2, '0')}`} />
               {chapter.title}
             </h3>
             <span className="text-sm text-mist">
@@ -109,6 +109,9 @@ export default function Journey() {
             <div
               ref={rail}
               data-lenis-prevent
+              role="region"
+              aria-label="Milestones — scroll sideways"
+              tabIndex={0}
               className="rail gutter flex gap-4 overflow-x-auto py-6 sm:py-8 [perspective:1200px]"
             >
               {chapter.milestones.map((m, i) => (
@@ -117,8 +120,82 @@ export default function Journey() {
             </div>
             <RailButtons rail={rail} />
           </div>
+          <MilestoneTimeline rail={rail} codes={chapter.milestones.map((m) => m.code)} />
         </motion.div>
       </AnimatePresence>
     </>
+  );
+}
+
+/** Timeline under the cards: the line draws as the rail scrolls and each milestone dot ignites in turn. */
+function MilestoneTimeline({ rail, codes }: { rail: RefObject<HTMLDivElement | null>; codes: string[] }) {
+  const n = codes.length;
+  const [p, setP] = useState(0);
+  const raw = useMotionValue(0);
+  const fill = useSpring(raw, { stiffness: 120, damping: 26, mass: 0.4 });
+
+  useEffect(() => {
+    const el = rail.current;
+    if (!el) return;
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const v = max > 1 ? el.scrollLeft / max : 1;
+      setP(v);
+      raw.set(v);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      el.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [rail, raw, n]);
+
+  const goTo = (i: number) => {
+    const el = rail.current;
+    const card = el?.children[i] as HTMLElement | undefined;
+    if (!el || !card) return;
+    el.scrollTo({ left: card.offsetLeft - parseFloat(getComputedStyle(el).paddingLeft || '0'), behavior: 'smooth' });
+  };
+
+  if (n < 2) return null;
+  return (
+    <div className="gutter pb-2" aria-label="Milestone timeline">
+      <div className="relative mx-2 h-10">
+        <div className="absolute inset-x-0 top-[11px] h-px bg-white/12" />
+        <motion.div
+          className="absolute inset-x-0 top-[10px] h-[2px] origin-left rounded bg-gradient-to-r from-signal to-signal-2 shadow-[0_0_12px_rgba(45,212,191,0.6)]"
+          style={{ scaleX: fill }}
+        />
+        {codes.map((code, i) => {
+          const lit = p >= i / (n - 1) - 0.001;
+          return (
+            <button
+              key={code}
+              type="button"
+              onClick={() => goTo(i)}
+              aria-label={`Go to milestone ${code}`}
+              className="absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1.5"
+              style={{ left: `${(i / (n - 1)) * 100}%` }}
+            >
+              <motion.span
+                className="block h-[22px] w-[22px] rounded-full border"
+                animate={{
+                  scale: lit ? 1 : 0.55,
+                  backgroundColor: lit ? 'var(--color-signal)' : 'rgba(255,255,255,0.06)',
+                  borderColor: lit ? 'var(--color-signal-2)' : 'rgba(255,255,255,0.2)',
+                  boxShadow: lit ? '0 0 16px var(--glow-signal)' : '0 0 0 rgba(0,0,0,0)',
+                }}
+                transition={{ duration: 0.45, ease: EASE }}
+              />
+              <span className={`hidden text-[10px] font-bold tracking-[0.16em] transition-colors duration-300 sm:block ${lit ? 'text-signal-2' : 'text-smoke'}`}>
+                {code.split(" ").pop()}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

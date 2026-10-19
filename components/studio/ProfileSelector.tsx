@@ -66,7 +66,7 @@ export default function ProfileSelector({ onPick }: { onPick: (id: ProfileId) =>
     <motion.div
       ref={root}
       data-lenis-prevent
-      className="sheet-scroll fixed inset-0 z-[110] flex flex-col items-center justify-center overflow-y-auto overscroll-y-contain bg-ink px-4 py-16"
+      className="sheet-scroll fixed inset-0 z-[110] flex flex-col items-center overflow-y-auto before:flex-1 before:content-[''] after:flex-1 after:content-[''] overscroll-y-contain bg-ink px-4 py-16"
       initial={{ opacity: 0, scale: 1.03, filter: 'blur(12px)' }}
       animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
       exit={{ opacity: 0, scale: 1.04, filter: 'blur(12px)' }}
@@ -193,7 +193,7 @@ export default function ProfileSelector({ onPick }: { onPick: (id: ProfileId) =>
                     <ProfileAvatar id={p.id} />
                     {p.badge && (
                       <span
-                        className={`absolute -right-2 -top-2 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.14em] text-ink ${
+                        className={`absolute -right-2 -top-2 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.14em] text-ink ${
                           p.id === 'recruiter' ? 'bg-signal' : 'bg-gold'
                         }`}
                       >

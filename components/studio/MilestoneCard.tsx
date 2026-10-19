@@ -18,7 +18,7 @@ export default function MilestoneCard({ milestone, index }: { milestone: Milesto
       transition={{ duration: 0.55, delay: Math.min(index * 0.06, 0.24), ease: EASE }}
     >
       <Tilt max={7} className="group h-full rounded-xl">
-        <div className="flex h-full flex-col overflow-hidden rounded-xl bg-ink-2 ring-1 ring-white/10 transition duration-500 group-hover:ring-signal/60 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
+        <div className="spot flex h-full flex-col overflow-hidden rounded-xl bg-ink-2 ring-1 ring-white/10 transition duration-500 group-hover:ring-signal/60 group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
           <div className="relative aspect-video overflow-hidden">
             <div className="absolute inset-0 transition-transform duration-[1.2s] ease-[var(--ease-cine)] group-hover:scale-110">
               <PosterBackdrop palette={milestone.palette}>

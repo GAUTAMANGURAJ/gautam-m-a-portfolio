@@ -20,8 +20,8 @@
   --color-gold: #d4a574;
   --color-gold-2: #e8c49a;
   --color-bone: #e8eef8;
-  --color-mist: #8b95a8;
-  --color-smoke: #5c6578;
+  --color-mist: #9aa4b8;
+  --color-smoke: #8e99ad;
 
   --glow-signal: rgba(45, 212, 191, 0.35);
   --glow-gold: rgba(212, 165, 116, 0.28);
@@ -81,6 +81,7 @@ body {
 .atmosphere {
   position: fixed;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
   z-index: 0;
   background:
@@ -129,6 +130,20 @@ body {
   /* pan-x alone blocks vertical page scroll when finger is on the rail */
   touch-action: pan-x pan-y;
   scroll-snap-type: x proximity;
+}
+.rail {
+  scroll-padding-inline: var(--gutter);
+}
+/* Hint that a horizontal strip continues past the edge (touch layouts only) */
+.fade-x-end {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+}
+@media (min-width: 1024px) {
+  .fade-x-end {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 .rail::-webkit-scrollbar {
   display: none;
@@ -189,6 +204,12 @@ body {
 }
 
 .text-outline {
+  color: transparent;
+  -webkit-text-stroke: 2px rgba(232, 238, 248, 0.28);
+}
+/* Decorative outlined label drawn from data-text, so it isn't real (low-contrast) text */
+.outline-label::before {
+  content: attr(data-text);
   color: transparent;
   -webkit-text-stroke: 2px rgba(232, 238, 248, 0.28);
 }
@@ -323,6 +344,203 @@ select:focus-visible,
   html {
     scroll-behavior: auto;
   }
+}
+
+/* Spotlight cards — pointer-following glow + gradient border (fine pointers only) */
+@media (hover: hover) and (pointer: fine) {
+  .spot {
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+  }
+  .spot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s var(--ease-cine);
+    background: radial-gradient(320px circle at var(--mx) var(--my), rgba(94, 234, 212, 0.14), transparent 62%);
+    z-index: 15;
+  }
+  .spot::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s var(--ease-cine);
+    background: radial-gradient(220px circle at var(--mx) var(--my), rgba(94, 234, 212, 0.85), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    z-index: 16;
+  }
+  .spot:hover::after,
+  .spot:hover::before {
+    opacity: 1;
+  }
+}
+
+/* Ambient background — drifting aurora + depth layers */
+.aurora {
+  position: absolute;
+  border-radius: 9999px;
+  will-change: transform;
+  pointer-events: none;
+}
+.aurora-a {
+  width: 70vmax;
+  height: 70vmax;
+  left: -25vmax;
+  top: -30vmax;
+  background: radial-gradient(closest-side, var(--glow-signal), transparent 70%);
+  opacity: 0.22;
+  animation: aurora-a 34s ease-in-out infinite alternate;
+}
+.aurora-b {
+  width: 60vmax;
+  height: 60vmax;
+  right: -25vmax;
+  top: 20vh;
+  background: radial-gradient(closest-side, var(--glow-gold), transparent 70%);
+  opacity: 0.2;
+  animation: aurora-b 42s ease-in-out infinite alternate;
+}
+.aurora-c {
+  width: 55vmax;
+  height: 55vmax;
+  left: 15vw;
+  bottom: -30vmax;
+  background: radial-gradient(closest-side, rgba(56, 189, 248, 0.22), transparent 70%);
+  opacity: 0.16;
+  animation: aurora-c 38s ease-in-out infinite alternate;
+}
+@keyframes aurora-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(14vw, 10vh, 0) scale(1.15); }
+}
+@keyframes aurora-b {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to { transform: translate3d(-16vw, -8vh, 0) scale(0.9); }
+}
+@keyframes aurora-c {
+  from { transform: translate3d(0, 0, 0) scale(0.95); }
+  to { transform: translate3d(10vw, -12vh, 0) scale(1.2); }
+}
+.ambient-dots {
+  position: absolute;
+  inset: -20% 0;
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(232, 238, 248, 0.55) 1px, transparent 1.2px);
+  background-size: 90px 90px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 10%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 10%, transparent 70%);
+}
+@media (pointer: coarse), (max-width: 768px) {
+  .aurora-c { display: none; }
+  .aurora { opacity: 0.16; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora { animation: none !important; }
+}
+
+/* Cursor grid reveal — grid lines light up under the pointer */
+.cursor-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(94, 234, 212, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94, 234, 212, 0.35) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(260px circle at var(--cx, -400px) var(--cy, -400px), #000, transparent 70%);
+  mask-image: radial-gradient(260px circle at var(--cx, -400px) var(--cy, -400px), #000, transparent 70%);
+  opacity: 0.55;
+}
+
+/* Project card hover preview */
+.preview-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.16) 50%, transparent 62%);
+  transform: translateX(-130%);
+  z-index: 5;
+}
+.group:hover .preview-sweep {
+  animation: preview-sweep 1.8s var(--ease-cine) infinite;
+}
+@keyframes preview-sweep {
+  0% { transform: translateX(-130%); }
+  60%, 100% { transform: translateX(130%); }
+}
+@keyframes kenburns {
+  from { transform: scale(1.02) translate3d(-1.5%, 0, 0); }
+  to { transform: scale(1.12) translate3d(1.5%, -1.5%, 0); }
+}
+@media (hover: none) {
+  .kenburns {
+    animation: kenburns 16s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kenburns,
+  .group:hover .preview-sweep {
+    animation: none;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.95; }
+}
+
+/* Footer marquee */
+.marquee-track {
+  animation: marquee 48s linear infinite;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}
+
+/* Architecture diagram — flowing dashes on the focused path */
+.arch-flow {
+  stroke-dasharray: 6 8;
+  animation: arch-flow 1.2s linear infinite;
+}
+@keyframes arch-flow {
+  to { stroke-dashoffset: -28; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arch-flow { animation: none; stroke-dasharray: none; }
+}
+
+/* Navbar — premium glass surface */
+.nav-surface {
+  background:
+    linear-gradient(180deg, rgba(24, 34, 58, 0.97) 0%, rgba(9, 14, 26, 0.985) 100%);
+}
+.nav-sheen {
+  background: linear-gradient(90deg, transparent, rgba(45, 212, 191, 0.0) 30%, rgba(94, 234, 212, 0.9) 50%, rgba(45, 212, 191, 0.0) 70%, transparent);
+  background-size: 220% 100%;
+  animation: nav-sheen 5.5s linear infinite;
+}
+@keyframes nav-sheen {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-sheen { animation: none; }
 }
 
 /* Contact section: keep compose panel clear of fixed nav on jump links */

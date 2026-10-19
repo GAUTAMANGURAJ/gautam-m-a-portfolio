@@ -66,7 +66,7 @@ export default function About() {
           </motion.p>
           <p className="mt-4 text-sm text-mist">— {profile.fullName}</p>
 
-          <motion.dl
+          <motion.ul
             className="mt-10 grid gap-px overflow-hidden rounded-xl bg-white/10 sm:grid-cols-2"
             initial="hidden"
             whileInView="show"
@@ -74,24 +74,24 @@ export default function About() {
             transition={{ staggerChildren: 0.08 }}
           >
             {facts.map((f) => (
-              <motion.div
+              <motion.li
                 key={f.k}
-                className="bg-ink-2 p-5"
+                className="spot bg-ink-2 p-5"
                 variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } } }}
               >
                 <Tilt max={4} glare={false} className="h-full">
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.28em] text-smoke">{f.k}</dt>
-                  <dd className="mt-2 text-base font-semibold text-bone">{f.v}</dd>
-                  <dd className="mt-0.5 text-xs text-mist">{f.s}</dd>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-smoke">{f.k}</p>
+                  <p className="mt-2 text-base font-semibold text-bone">{f.v}</p>
+                  <p className="mt-0.5 text-xs text-mist">{f.s}</p>
                 </Tilt>
-              </motion.div>
+              </motion.li>
             ))}
-          </motion.dl>
+          </motion.ul>
 
           <div className="mt-8">
             <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-smoke">Experience</p>
             <Tilt max={3} className="rounded-xl">
-              <div className="rounded-xl bg-ink-2 p-5 ring-1 ring-white/10">
+              <div className="spot rounded-xl bg-ink-2 p-5 ring-1 ring-white/10">
                 <p className="text-sm font-semibold text-bone">
                   {experience[0].role} · {experience[0].company}
                 </p>
@@ -114,7 +114,7 @@ export default function About() {
             <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-smoke">How I work</p>
             <ul className="space-y-3">
               {workingPrinciples.map((p) => (
-                <li key={p.title} className="rounded-xl border border-white/10 bg-ink-2/80 px-4 py-3">
+                <li key={p.title} className="spot rounded-xl border border-white/10 bg-ink-2/80 px-4 py-3">
                   <p className="text-sm font-semibold text-bone">{p.title}</p>
                   <p className="mt-1 text-xs leading-relaxed text-mist">{p.detail}</p>
                 </li>
